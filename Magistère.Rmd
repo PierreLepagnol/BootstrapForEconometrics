@@ -1,0 +1,71 @@
+---
+title: "Magistère"
+author: "QUENTIN & PIERRE"
+date: "11/02/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(boot)
+#import du dataset
+donnee=read_delim('./data_set.csv',delim=';')
+donnee=donnee %>% filter(appartement==1)
+donnee=donnee %>% select(-c(appartement,studio,chambre,maison,arrondissement))
+```
+
+```{r}
+lm_1=lm(prix~.,data=donnee)
+summary(lm_1)
+```
+
+
+# Bootstrap par paires
+
+```{r}
+#Tirage d'un echantillon bootstrap
+
+#Utiliser trois  chiffre au hasard (xxx) comme initialisation du générateur
+set.seed(123)
+B=200
+npop=50
+alpha=0.05
+
+
+
+tirage_bootstrap=function(dataset,indexes,npop){
+  ech=dataset[sample(1:nrow(dataset),npop,replace=T),]
+  return(ech)
+}
+
+
+Coefficients=function(dataframe){
+ model=lm(prix~.,data=dataframe)
+ return(model$coefficients)
+}
+bootsample=map(1:B,tirage_bootstrap,dataset=donnee,npop=npop)
+
+beta_star=map(bootsample,Coefficients)
+
+# beta_star=bind_rows(lapply(beta_star, as.data.frame.list))
+beta_star=purrr::map_df( beta_star, as.list )
+
+beta_star %>% ggplot()+aes(x=`(Intercept)`)+geom_histogram()
+beta_star %>% ggplot()+aes(x=`surface`)+geom_histogram()
+
+
+quantiles=lapply(beta_star,FUN=quantile,probs=c(alpha,1-alpha))
+Betamoy=colMeans(x=beta_star, na.rm = TRUE)
+
+```
+
+
+# Bootstrap résiduel
+## Bootstrap sauvage
+
+```{r}
+
+```
+
+
