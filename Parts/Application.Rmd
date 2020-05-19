@@ -1,0 +1,150 @@
+
+# Application des méthodes
+##Initialisation des paramêtres
+```{r}
+L=30
+# Nombre d'échantillon Boot 
+B=2000
+# Seuil de risque
+alpha=0.05
+```
+
+Nous allons construire un modèle de base en selectionnant automatiquement les variables en fontion de l'AIC du modèle avec la fonction `step`. 
+```{r}
+Init=step(lm(prix~.,data=donnee))
+donnee=Init$model
+```
+
+```{r}
+summary(Init)
+```
+
+```{r}
+plot(Init)
+```
+Sur les différents graphiques, il est compliqué de déceler de l'Hétérosédasticité.
+
+# Test d'Homosédasticité
+
+Nous allons tester l'Homosédasticité de nos résidus avec les test Breusch-Pagan et Goldfeld–Quandt.
+
+#### Test de Breusch-Pagan
+```{r echo=F}
+Test1=bptest(Init)
+Test1
+```
+
+#### Test de Goldfeld-Quandt
+```{r echo=F}
+Test2=gqtest(Init)
+Test2
+```
+
+Le test de Breusch-Pagan échoue à rejeté l'hypothèse d'homosédasticité, mais le test de Goldfeld-Quandt rejette cette dernière. Dans un soucis de sécurité (et pour l'illustration de notre propos théorique) nous admettons le rejet de l'homosédasticité, nous sommes donc en présence d'hétérosédasticité.
+
+
+# Les $\neq$ fonctions utilisée
+## Bootstrap par paire
+```{r}
+# Bootstrap par paire function
+BootPaires=function(k){
+  # Création échantillon Bootstrap
+  idxs = sample(nrow(donnee), replace =TRUE)
+  mod = lm(prix~., data= donnee[idxs,])
+  #Affectation  des coeff dans la ligne i
+  return(mod$coefficients)
+}
+```
+
+## Bootstrap Résiduel
+```{r}
+BootResid=function(k){
+  # Création échantillon Bootstrap
+  esp_star = sample(modResid$residuals, replace =TRUE)
+  # Calcul des nouvelles variables réponses
+  y_star=(modResid$fitted.values)+esp_star
+  donnee = donnee%>% mutate(prix=y_star) 
+  
+  mod = lm(prix~., data=donnee)
+
+  return(mod$coefficients)
+}
+```
+
+## Wild Bootstrap 
+```{r}
+WildBoot=function(k){
+  distrib='normale'
+  # Création échantillon Bootstrap
+  a_i=(1-H)^(-1/2)
+  v_i=rnorm(length(modWild$residuals),0,1)
+  # Calcul des nouvelles variables réponses
+  y_star=modWild$fitted.values+ modWild$residuals*a_i*v_i
+  donnee = donnee%>% mutate(prix=y_star) 
+  mod = lm(prix~., data=donnee)
+  #Affectation  des coeff dans la ligne i
+  return(mod$coefficients)
+}
+```
+
+# Mise en oeuvre
+```{r}
+Estim_Beta=function(l,FuncBoot){
+  Betas_curr=mclapply(1:B,FuncBoot,mc.cores = 4)
+  #Calcul du Beta Moyen
+  Betas_curr=map_df(Betas_curr,as.list)
+  Betas_curr=colMeans(x=Betas_curr, na.rm = TRUE)
+  return(Betas_curr)
+}
+
+```
+
+## Bootstrap par paire
+```{r, include=F}
+Betas_paire=mclapply(1:L,Estim_Beta,FuncBoot=BootPaires, mc.cores = 4)
+Betas_paire=map_df(Betas_paire,as.list)
+```
+
+### Calcul du $\hat\beta_{moyen_{paire}}$
+```{r, eval=T}
+BetaMean_paire=colMeans(Betas_paire)
+BetaMean_paire
+```
+
+
+## Bootstrap résiduels
+```{r, include=F}
+modResid = lm(prix~., data=donnee)
+Betas_residuel=mclapply(1:L,Estim_Beta,FuncBoot=BootResid, mc.cores = 4)
+Betas_residuel=map_df(Betas_residuel,as.list)
+```
+### Calcul du $\hat\beta_{moyen_{résiduel}}$
+```{r, eval=T}
+BetaMean_residuel=colMeans(Betas_residuel)
+BetaMean_residuel
+```
+
+
+## Bootstrap sauvage
+```{r}
+modWild=lm(prix~.,data=donnee)
+X=donnee %>% select(-prix) %>%  mutate(intercept=1)
+X=relocate("intercept",X)
+H=hat(X)
+Betas_Wild=mclapply(1:L,Estim_Beta,FuncBoot=WildBoot, mc.cores = 4)
+Betas_Wild=map_df(Betas_Wild,as.list)
+```
+
+
+```{r}
+BetaMean_wild=colMeans(Betas_Wild)
+```
+
+# Comparaison des différentes méthodes
+
+Différents échantillons de nos $\hat\beta$ ($\hat\beta_{paire}$,$\hat\beta_{résiduel}$ et $\hat\beta_{wild}$) étant calculés, nous pouvons obtenir pour chaque méthode $\hat\beta$ moyen, et un intervalle de confiance sur ce paramètre.
+
+
+```{r eval=T}
+save.image('../everything.RData')
+```

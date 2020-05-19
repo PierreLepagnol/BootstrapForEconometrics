@@ -1,0 +1,57 @@
+
+# Théorie
+## Les $\neq$ techniques de Bootstrap en économétrie
+
+
+Nous partons du même problème pour toutes les méthodes :
+$$\begin{cases}
+y_i = X_i \beta + \eps_i \\
+E(\eps_i) = 0, \\
+\mathbf{E(\eps_i) = \sig_i^2}
+\end{cases}$$
+
+Nous somme dans un cadre d'hétérosédacticité.
+Notre objectif est donc de calculer le $\hat\beta$ sans biais.
+
+## Bootstrap par paire
+
+Pour le Bootstrap par paire, nous allons calculer B $\hat\beta$ :
+
+1. Nous tirons, n couples $(X,Y)$, notés $(X^*_1,Y^*_1) \dots (X^*_n,Y^*_n)$.
+2. Nous ajustons notre modèle linéaire sur les n couples.
+3. Nous récupérons le vecteur $\hat\beta$.
+
+Ensuite nous calculons le $\hat\beta_{moyen}$ et un intervalle de confiance sur le $\hat\beta_{moyen}$.
+  
+## Bootstrap résiduel
+Une autre approche du bootstrapping dans les problèmes de régression consiste à rééchantillonner les résidus. La méthode se déroule comme suit. 
+
+1.Nous ajustons une regression linéaire et nous récuperons les $\eps$
+
+2. Pour chaque paire $(x_i,y_i)$, dans laquelle $x_i$ est une variable explicative, nous ajoutons un résidu rééchantillonné de manière aléatoire, $\eps_j$ à la valeur ajustée $y_i$.  De fait nous créons de nouvelles variables réponse $y^*_i= \hat y_j + \hat\eps_j$ où j est choisi au hasard dans la liste (1, ..., n) pour chaque i.
+
+3. Nous ré-ajustons un modèle linéaire sur les nouvelles variables de réponse.
+4. Nous récupérons le vecteur $\hat\beta$.
+
+Ensuite nous calculons le $\hat\beta_{moyen}$ et un intervalle de confiance sur le $\hat\beta_{moyen}$.
+
+## Bootstrap sauvage
+
+Le principe du Bootstrap sauvage est similaire au Bootstrap residuel.
+
+1.Nous ajustons une regression linéaire et nous récuperons les $\hat\eps$
+
+2. Pour chaque paire $(x_i,y_i)$, dans laquelle $x_i$ est une variable explicative :
+  nous ajoutons une réalisation d'une variable aléatoire $\xi$ ayant pour propriété :
+   * $E(\xi) = 0$
+   * $Var(\xi) = 1$
+ au résidu $\eps_i$  correspondant à la valeur ajustée $\hat y_i$. De fait, nous créons de nouvelles variables réponse $y^*_i= \hat y_j + \hat\eps_j \xi_i$ où j est choisi au hasard dans la liste (1, ..., n) pour chaque i.
+
+3. Nous ré-ajustons un modèle linéaire sur les nouvelles variables de réponse.
+4. Nous récupérons le vecteur $\hat\beta$.
+
+Ensuite nous calculons le $\hat\beta_{moyen}$ et un intervalle de confiance sur le $\hat\beta_{moyen}$.
+
+## Comparaison des différent $\beta$
+
+Pour comparer les Méthodes nous utiliserons des
